@@ -1,3 +1,6 @@
+# SECURITY: Uses pull_request_target to access PR metadata for title validation.
+# Safe because: does not checkout or execute PR code; only reads PR title.
+# Reviewed: 2026-03-31 (supply chain hardening)
 name: "Lint PR"
 
 on:

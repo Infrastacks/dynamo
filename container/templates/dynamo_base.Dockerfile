@@ -31,8 +31,7 @@ RUN ARCH_ALT=$([ "${TARGETARCH}" = "amd64" ] && echo "x86_64" || echo "aarch64")
     rm -rf sccache*
 
 # Install uv package manager
-# TODO: Pin uv image to a specific version tag for reproducibility (e.g. ghcr.io/astral-sh/uv:0.10.7)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.2 /uv /uvx /bin/
 
 # Install NATS server
 ARG NATS_VERSION
