@@ -34,7 +34,7 @@ jobs:
       group: gitlab_ci_runners
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
     - name: Sync Mirror Repository
       run: ./.github/workflows/mirror_repo.sh ${{ secrets.PROJECT_ACCESS_TOKEN }} ${{ secrets.MIRROR_URL }}
 
@@ -46,15 +46,15 @@ jobs:
       group: gitlab_ci_runners
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
     - name: Detect source code changes
       id: src_changes
-      uses: dorny/paths-filter@v3
+      uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3
       with:
         filters: .github/filters.yaml
     - name: Check if Validation Workflow has run
       id: check_workflow
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
