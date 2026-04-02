@@ -14,6 +14,7 @@ use axum::http::Response;
 
 use super::Metrics;
 use super::RouteDoc;
+use super::metering::MeteringCollector;
 use super::metrics;
 use super::metrics::register_worker_timing_metrics;
 use crate::discovery::ModelManager;
@@ -47,6 +48,7 @@ pub struct State {
     discovery_client: Arc<dyn Discovery>,
     flags: StateFlags,
     cancel_token: CancellationToken,
+    metering: Option<Arc<MeteringCollector>>,
 }
 
 #[derive(Default, Debug)]
@@ -112,6 +114,52 @@ impl State {
         discovery_client: Arc<dyn Discovery>,
         cancel_token: CancellationToken,
     ) -> Self {
+        use dynamo_runtime::config::environment_names::llm::metering as env_meter;
+
+        let metering = if env_is_truthy(env_meter::DYN_METERING_ENABLED) {
+            match (
+                var(env_meter::DYN_METERING_WEBHOOK_URL),
+                var(env_meter::DYN_METERING_ENVIRONMENT_ID),
+                var(env_meter::DYN_METERING_AUTH_TOKEN),
+            ) {
+                (Ok(url), Ok(environment_id), Ok(auth_token))
+                    if !url.is_empty() && !environment_id.is_empty() && !auth_token.is_empty() =>
+                {
+                    let batch_size: usize = var(env_meter::DYN_METERING_BATCH_SIZE)
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(64);
+                    let flush_secs: u64 = var(env_meter::DYN_METERING_FLUSH_INTERVAL_SECS)
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(5);
+                    tracing::info!(
+                        url,
+                        batch_size,
+                        environment_id,
+                        flush_secs,
+                        "metering enabled — starting collector"
+                    );
+                    Some(MeteringCollector::new(
+                        url,
+                        environment_id,
+                        auth_token,
+                        batch_size,
+                        Duration::from_secs(flush_secs),
+                        cancel_token.clone(),
+                    ))
+                }
+                _ => {
+                    tracing::warn!(
+                        "DYN_METERING_ENABLED is set but DYN_METERING_WEBHOOK_URL, DYN_METERING_ENVIRONMENT_ID, or DYN_METERING_AUTH_TOKEN is missing"
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         Self {
             manager,
             metrics: Arc::new(Metrics::default()),
@@ -126,6 +174,7 @@ impl State {
                 anthropic_endpoints_enabled: AtomicBool::new(false),
             },
             cancel_token,
+            metering,
         }
     }
 
@@ -154,6 +203,11 @@ impl State {
     /// Get the cancellation token
     pub fn cancel_token(&self) -> &CancellationToken {
         &self.cancel_token
+    }
+
+    /// Get the metering collector, if metering is enabled.
+    pub fn metering(&self) -> Option<&Arc<MeteringCollector>> {
+        self.metering.as_ref()
     }
 
     // TODO

@@ -101,6 +101,7 @@ ARG HAS_TRTLLM_CONTEXT
 ARG TENSORRTLLM_PIP_WHEEL
 ARG TENSORRTLLM_INDEX_URL
 ARG GITHUB_TRTLLM_COMMIT
+ARG GITHUB_HOST
 
 {% if context.trtllm.has_trtllm_context == "1" %}
 # Copy only wheel files and commit info from trtllm_wheel stage from build_context
@@ -126,7 +127,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     export UV_CACHE_DIR=/root/.cache/uv UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 && \
     if [ "$HAS_TRTLLM_CONTEXT" = "1" ]; then \
         # Download and run install_tensorrt.sh from TensorRT-LLM GitHub before installing the wheel
-        curl -fsSL --retry 5 --retry-delay 10 --max-time 1800 -o /tmp/install_tensorrt.sh "https://github.com/NVIDIA/TensorRT-LLM/raw/${GITHUB_TRTLLM_COMMIT}/docker/common/install_tensorrt.sh" && \
+        curl -fsSL --retry 5 --retry-delay 10 --max-time 1800 -o /tmp/install_tensorrt.sh "${GITHUB_HOST}/NVIDIA/TensorRT-LLM/raw/${GITHUB_TRTLLM_COMMIT}/docker/common/install_tensorrt.sh" && \
         # Modify the script to use virtual environment pip instead of system pip3
         sed -i 's/pip3 install/uv pip install/g' /tmp/install_tensorrt.sh && \
         bash /tmp/install_tensorrt.sh && \

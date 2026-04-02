@@ -136,6 +136,7 @@ RUN git lfs install
 # Frontend deps (tritonclient + grpcio/protobuf pins) are installed here so the resolver
 # sees all constraints in one pass, avoiding grpcio downgrades in the test layer.
 # Test and dev dependencies are NOT installed here — they go in the test and dev images.
+ARG PYTORCH_WHEELS_URL
 RUN --mount=type=bind,source=./container/deps/requirements.common.txt,target=/tmp/requirements.common.txt \
     --mount=type=bind,source=./container/deps/requirements.planner.txt,target=/tmp/requirements.planner.txt \
     --mount=type=bind,source=./container/deps/requirements.frontend.txt,target=/tmp/requirements.frontend.txt \
@@ -143,7 +144,7 @@ RUN --mount=type=bind,source=./container/deps/requirements.common.txt,target=/tm
     export UV_CACHE_DIR=/home/dynamo/.cache/uv UV_GIT_LFS=1 UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 && \
     uv pip install \
         --index-strategy unsafe-best-match \
-        --extra-index-url https://download.pytorch.org/whl/cu130 \
+        --extra-index-url ${PYTORCH_WHEELS_URL}/cu130 \
         --requirement /tmp/requirements.common.txt \
         --requirement /tmp/requirements.planner.txt \
         --requirement /tmp/requirements.frontend.txt

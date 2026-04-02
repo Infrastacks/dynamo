@@ -292,6 +292,27 @@ pub mod llm {
     pub const DYN_ENABLE_STREAMING_REASONING_DISPATCH: &str =
         "DYN_ENABLE_STREAMING_REASONING_DISPATCH";
 
+    /// InfraStacks per-request metering configuration
+    pub mod metering {
+        /// Enable per-request metering (set to "true" or "1" to enable)
+        pub const DYN_METERING_ENABLED: &str = "DYN_METERING_ENABLED";
+
+        /// Webhook URL to POST metering record batches to
+        pub const DYN_METERING_WEBHOOK_URL: &str = "DYN_METERING_WEBHOOK_URL";
+
+        /// Environment ID attached to every metering batch
+        pub const DYN_METERING_ENVIRONMENT_ID: &str = "DYN_METERING_ENVIRONMENT_ID";
+
+        /// Bearer token used when posting metering batches
+        pub const DYN_METERING_AUTH_TOKEN: &str = "DYN_METERING_AUTH_TOKEN";
+
+        /// Number of records per batch before flushing (default: 64)
+        pub const DYN_METERING_BATCH_SIZE: &str = "DYN_METERING_BATCH_SIZE";
+
+        /// Flush interval in seconds when batch is not full (default: 5)
+        pub const DYN_METERING_FLUSH_INTERVAL_SECS: &str = "DYN_METERING_FLUSH_INTERVAL_SECS";
+    }
+
     /// Metrics configuration
     pub mod metrics {
         /// Custom metrics prefix (overrides default "dynamo_frontend")
@@ -479,6 +500,12 @@ mod tests {
             kvbm::leader::DYN_KVBM_LEADER_ZMQ_PUB_PORT,
             kvbm::leader::DYN_KVBM_LEADER_ZMQ_ACK_PORT,
             // LLM
+            llm::metering::DYN_METERING_ENABLED,
+            llm::metering::DYN_METERING_WEBHOOK_URL,
+            llm::metering::DYN_METERING_ENVIRONMENT_ID,
+            llm::metering::DYN_METERING_AUTH_TOKEN,
+            llm::metering::DYN_METERING_BATCH_SIZE,
+            llm::metering::DYN_METERING_FLUSH_INTERVAL_SECS,
             llm::DYN_HTTP_BODY_LIMIT_MB,
             llm::DYN_LORA_ENABLED,
             llm::DYN_LORA_PATH,

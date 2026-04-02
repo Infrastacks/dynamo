@@ -43,7 +43,7 @@ ARG WHEEL_BUILDER_IMAGE=${BASE_IMAGE}:${BASE_IMAGE_TAG}
 {# Multi-arch: manylinux selection is handled via --platform-pinned stage aliases   #}
 {# in wheel_builder.Dockerfile using TARGETARCH. No static ARG needed here.         #}
 {% else %}
-ARG WHEEL_BUILDER_IMAGE=quay.io/pypa/manylinux_2_28_{{ "x86_64" if platform == "amd64" else "aarch64" }}
+ARG WHEEL_BUILDER_IMAGE={{ context.registries.quay_io }}/pypa/manylinux_2_28_{{ "x86_64" if platform == "amd64" else "aarch64" }}
 {% endif %}
 
 # Build configuration
@@ -131,3 +131,13 @@ ARG TRTLLM_PYTHON_VERSION={{ context[framework].python_version }}
 ARG EFA_VERSION={{ context.dynamo.efa_version }}
 ARG EFA_BASE_IMAGE={{ "runtime" if target=="runtime" else "dev" }}
 {%- endif -%}
+
+# Air-gap / private registry overrides (defaults = public registries)
+ARG REGISTRY_NVCR={{ context.registries.nvcr_io }}
+ARG REGISTRY_GHCR={{ context.registries.ghcr_io }}
+ARG REGISTRY_QUAY={{ context.registries.quay_io }}
+ARG GITHUB_HOST={{ context.package_sources.github_host }}
+ARG PIP_INDEX_URL={{ context.package_sources.pypi_index }}
+ARG PYTORCH_WHEELS_URL={{ context.package_sources.pytorch_wheels }}
+ARG NVIDIA_PIP_INDEX={{ context.package_sources.nvidia_pip_index }}
+ARG RUST_DIST={{ context.package_sources.rust_dist }}

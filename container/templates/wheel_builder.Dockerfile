@@ -12,8 +12,8 @@
 # always pulled as the correct native arch regardless of the current TARGETPLATFORM.
 # BuildKit only fetches and builds the stage that TARGETARCH resolves to; the other
 # is a no-op for each sub-build.
-FROM --platform=linux/amd64 quay.io/pypa/manylinux_2_28_x86_64 AS manylinux_amd64
-FROM --platform=linux/arm64 quay.io/pypa/manylinux_2_28_aarch64 AS manylinux_arm64
+FROM --platform=linux/amd64 {{ context.registries.quay_io }}/pypa/manylinux_2_28_x86_64 AS manylinux_amd64
+FROM --platform=linux/arm64 {{ context.registries.quay_io }}/pypa/manylinux_2_28_aarch64 AS manylinux_arm64
 {% endif %}
 
 ##################################
@@ -31,6 +31,8 @@ FROM ${WHEEL_BUILDER_IMAGE} AS wheel_builder_base
 ARG TARGETARCH
 ARG CARGO_BUILD_JOBS
 ARG DEVICE
+ARG GITHUB_HOST
+ARG REGISTRY_GHCR
 
 WORKDIR /workspace
 {% if device == "xpu" or device == "cpu" %}
@@ -175,7 +177,7 @@ RUN set -eux; \
       aarch64) PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-aarch_64.zip" ;; \
       *) echo "Unsupported architecture: ${ARCH_ALT}" >&2; exit 1 ;; \
     esac; \
-    wget --tries=3 --waitretry=5 -O /tmp/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
+    wget --tries=3 --waitretry=5 -O /tmp/protoc.zip "${GITHUB_HOST}/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
     rm -f /usr/local/bin/protoc /usr/bin/protoc; \
     unzip -o /tmp/protoc.zip -d /usr/local bin/protoc include/*; \
     chmod +x /usr/local/bin/protoc; \
@@ -187,7 +189,7 @@ ENV PROTOC=/usr/local/bin/protoc
 
 {% if device == "xpu" or device == "cpu" %}
 # Install uv package manager
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=${REGISTRY_GHCR}/astral-sh/uv:latest /uv /uvx /bin/
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:${LD_LIBRARY_PATH:-}
 {% else %}
 ENV CUDA_PATH=/usr/local/cuda \
@@ -212,7 +214,7 @@ ARG NIXL_GDRCOPY_REF
 
 # Build and install gdrcopy
 RUN ARCH_ALT=$([ "${TARGETARCH}" = "amd64" ] && echo "x86_64" || echo "aarch64") && \
-    git clone --depth 1 --branch ${NIXL_GDRCOPY_REF} https://github.com/NVIDIA/gdrcopy.git && \
+    git clone --depth 1 --branch ${NIXL_GDRCOPY_REF} ${GITHUB_HOST}/NVIDIA/gdrcopy.git && \
     cd gdrcopy/packages && \
     CUDA=/usr/local/cuda ./build-rpm-packages.sh && \
     rpm -Uvh gdrcopy-kmod-*.el8.noarch.rpm && \
@@ -290,7 +292,7 @@ RUN --mount=type=secret,id=aws-key-id,env=AWS_ACCESS_KEY_ID \
         eval $(/tmp/use-sccache.sh setup-env); \
     fi && \
     cd /usr/local/src && \
-    git clone https://github.com/openucx/ucx.git && \
+    git clone ${GITHUB_HOST}/openucx/ucx.git && \
     cd ucx &&  \
     git checkout $NIXL_UCX_REF &&	 \
     if [ "$DEVICE" = "xpu" ]; then \
@@ -356,7 +358,7 @@ RUN --mount=type=secret,id=aws-key-id,env=AWS_ACCESS_KEY_ID \
         eval $(/tmp/use-sccache.sh setup-env); \
     fi && \
     cd /usr/local/src && \
-    git clone https://github.com/ofiwg/libfabric.git && \
+    git clone ${GITHUB_HOST}/ofiwg/libfabric.git && \
     cd libfabric && \
     git checkout $NIXL_LIBFABRIC_REF && \
     ./autogen.sh && \
@@ -388,7 +390,7 @@ RUN --mount=type=secret,id=aws-key-id,env=AWS_ACCESS_KEY_ID \
         eval $(/tmp/use-sccache.sh setup-env cmake); \
     fi && \
     git clone --recurse-submodules --depth 1 --branch ${AWS_SDK_CPP_VERSION} \
-        https://github.com/aws/aws-sdk-cpp.git /tmp/aws-sdk-cpp && \
+        ${GITHUB_HOST}/aws/aws-sdk-cpp.git /tmp/aws-sdk-cpp && \
     mkdir -p /tmp/aws-sdk-cpp/build && \
     cd /tmp/aws-sdk-cpp/build && \
     cmake .. \
@@ -498,7 +500,7 @@ RUN --mount=type=secret,id=aws-key-id,env=AWS_ACCESS_KEY_ID \
         eval $(/tmp/use-sccache.sh setup-env); \
     fi && \
     source ${VIRTUAL_ENV}/bin/activate && \
-    git clone "https://github.com/ai-dynamo/nixl.git" && \
+    git clone "${GITHUB_HOST}/ai-dynamo/nixl.git" && \
     cd nixl && \
     git checkout ${NIXL_REF} && \
     if [ "$DEVICE" = "cuda" ]; then \

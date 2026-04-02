@@ -112,3 +112,20 @@ trtllm:
   flash_attn_version: 2.7.4.post1+25.12
   flashinfer_python_ver: 0.6.1
   has_trtllm_context: "0"
+
+# ─── Air-Gap / Private Registry Overrides ────────────────────────────────
+# Override these to point at internal registries for air-gapped builds.
+# Defaults = public registries (backward compatible, no change to existing builds).
+
+registries:
+  nvcr_io: nvcr.io
+  ghcr_io: ghcr.io
+  quay_io: quay.io
+  docker_io: docker.io
+
+package_sources:
+  github_host: https://github.com
+  pypi_index: https://pypi.org/simple
+  pytorch_wheels: https://download.pytorch.org/whl
+  nvidia_pip_index: https://pypi.nvidia.com
+  rust_dist: https://static.rust-lang.org

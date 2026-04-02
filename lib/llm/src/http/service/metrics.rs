@@ -385,6 +385,8 @@ pub struct ResponseMetricCollector {
     decode_dp_rank: Option<u32>,
     // Decode worker type for Prometheus labeling - stored at routing time to avoid MDC lookup
     decode_worker_type: Option<String>,
+    // InfraStacks per-request metering guard (optional)
+    metering_guard: Option<super::metering::MeteringGuard>,
 }
 
 impl Default for Metrics {
@@ -1099,7 +1101,14 @@ impl ResponseMetricCollector {
             decode_worker_id: None,
             decode_dp_rank: None,
             decode_worker_type: None,
+            metering_guard: None,
         }
+    }
+
+    /// Attach an InfraStacks metering guard to this collector.
+    /// Token counts and TTFT will be forwarded to the guard automatically.
+    pub fn set_metering_guard(&mut self, guard: super::metering::MeteringGuard) {
+        self.metering_guard = Some(guard);
     }
 
     /// Set the worker info for per-worker TTFT/ITL metrics.
@@ -1189,6 +1198,14 @@ impl ResponseMetricCollector {
             return;
         }
 
+        // Forward token counts to metering guard if present
+        if let Some(ref guard) = self.metering_guard {
+            // isl is constant across chunks — only record it on the first token.
+            // output tokens are accumulated per chunk.
+            let input = if self.is_first_token { isl } else { 0 };
+            guard.record_tokens(input, num_tokens);
+        }
+
         // Increment the real-time output tokens counter
         self.metrics
             .output_tokens_counter
@@ -1202,6 +1219,12 @@ impl ResponseMetricCollector {
 
             // Publish TTFT
             let ttft = self.start_time.elapsed().as_secs_f64();
+
+            // Forward TTFT to metering guard
+            if let Some(ref guard) = self.metering_guard {
+                guard.record_ttft(ttft * 1000.0);
+            }
+
             self.metrics
                 .time_to_first_token
                 .with_label_values(&[&self.model])
@@ -1287,6 +1310,14 @@ impl Drop for ResponseMetricCollector {
             .output_sequence_length
             .with_label_values(&[&self.model])
             .observe(self.osl as f64);
+
+        // Mark metering guard as OK if we got at least one token (successful response).
+        // The guard defaults to "error" and is finalized when it drops (immediately after this).
+        if let Some(ref guard) = self.metering_guard {
+            if !self.is_first_token {
+                guard.mark_ok();
+            }
+        }
     }
 }
 

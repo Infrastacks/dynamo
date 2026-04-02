@@ -136,7 +136,7 @@ fi
 echo "\n=== Cloning vLLM repository ==="
 # Clone needed for DeepGEMM and EP kernels install scripts
 cd $INSTALLATION_DIR
-git clone https://github.com/vllm-project/vllm.git vllm
+git clone ${GITHUB_HOST:-https://github.com}/vllm-project/vllm.git vllm
 cd vllm
 git checkout $VLLM_REF
 echo "✓ vLLM repository cloned"
@@ -158,12 +158,12 @@ if [ "$DEVICE" = "cuda" ]; then
         EXTRA_PIP_ARGS=""
     elif [[ "$CUDA_VERSION_MAJOR" == "13" ]]; then
         VLLM_GITHUB_WHEEL="vllm-${VLLM_VER}+${TORCH_BACKEND}-cp38-abi3-manylinux_2_35_${ALT_ARCH}.whl"
-        EXTRA_PIP_ARGS="--index-strategy=unsafe-best-match --extra-index-url https://download.pytorch.org/whl/${TORCH_BACKEND}"
+        EXTRA_PIP_ARGS="--index-strategy=unsafe-best-match --extra-index-url ${PYTORCH_WHEELS_URL:-https://download.pytorch.org/whl}/${TORCH_BACKEND}"
     else
         echo "❌ Unsupported CUDA version for vLLM installation: ${CUDA_VERSION}"
         exit 1
     fi
-    VLLM_GITHUB_URL="https://github.com/vllm-project/vllm/releases/download/v${VLLM_VER}/${VLLM_GITHUB_WHEEL}"
+    VLLM_GITHUB_URL="${GITHUB_HOST:-https://github.com}/vllm-project/vllm/releases/download/v${VLLM_VER}/${VLLM_GITHUB_WHEEL}"
 
     # Install vLLM wheel
     # CUDA 12: Try PyPI first, fall back to GitHub release
@@ -199,8 +199,8 @@ if [ "$DEVICE" = "cpu" ]; then
     # vLLM CPU requirements pin torch with a +cpu local version (e.g. 2.10.0+cpu),
     # which is published on the PyTorch CPU wheel index instead of PyPI.
     # Install torchvision, torchaudio from the same index to get the correct versions with +cpu suffix.
-    uv pip install -r requirements/cpu-build.txt --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
-    uv pip install torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+    uv pip install -r requirements/cpu-build.txt --extra-index-url ${PYTORCH_WHEELS_URL:-https://download.pytorch.org/whl}/cpu --index-strategy unsafe-best-match
+    uv pip install torchvision torchaudio --extra-index-url ${PYTORCH_WHEELS_URL:-https://download.pytorch.org/whl}/cpu --index-strategy unsafe-best-match
     VLLM_TARGET_DEVICE=cpu \
     python3 setup.py bdist_wheel --dist-dir=dist --py-limited-api=cp38
     uv pip install dist/*.whl
@@ -213,7 +213,7 @@ echo "\n=== Installing LMCache from source ==="
 # Build from source AFTER vLLM so c_ops.so compiles against the installed PyTorch.
 # Ref: https://docs.lmcache.ai/getting_started/installation.html#install-latest-lmcache-from-source
 if [ "$DEVICE" = "cuda" ] && [[ "$CUDA_VERSION_MAJOR" == "12" ]] && [ "$ARCH" = "amd64" ]; then
-    git clone --depth 1 --branch v${LMCACHE_REF} https://github.com/LMCache/LMCache.git ${INSTALLATION_DIR}/lmcache
+    git clone --depth 1 --branch v${LMCACHE_REF} ${GITHUB_HOST:-https://github.com}/LMCache/LMCache.git ${INSTALLATION_DIR}/lmcache
     cd ${INSTALLATION_DIR}/lmcache
     uv pip install -r requirements/build.txt
     # Get torch lib dir and embed it as RPATH so c_ops.so finds torch libs at runtime
@@ -251,7 +251,7 @@ if [ -n "$VLLM_OMNI_REF" ] && [ "$ARCH" = "amd64" ]; then
         echo "✓ vLLM-Omni ${VLLM_OMNI_REF} installed from PyPI"
     else
         echo "⚠ PyPI install failed, building from source..."
-        git clone --depth 1 --branch ${VLLM_OMNI_REF} https://github.com/vllm-project/vllm-omni.git $INSTALLATION_DIR/vllm-omni
+        git clone --depth 1 --branch ${VLLM_OMNI_REF} ${GITHUB_HOST:-https://github.com}/vllm-project/vllm-omni.git $INSTALLATION_DIR/vllm-omni
         uv pip install $INSTALLATION_DIR/vllm-omni
         rm -rf $INSTALLATION_DIR/vllm-omni
         echo "✓ vLLM-Omni ${VLLM_OMNI_REF} installed from source"

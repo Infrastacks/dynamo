@@ -32,6 +32,7 @@ SOURCE_DIR=$(dirname "$(readlink -f "$0")")
 
 IMAGE=
 HF_HOME=${HF_HOME:-}
+HF_ENDPOINT=${HF_ENDPOINT:-}
 DEFAULT_HF_HOME=${SOURCE_DIR}/.cache/huggingface
 GPUS="all"
 PRIVILEGED=
@@ -90,6 +91,14 @@ get_options() {
         --hf-cache|--hf-home)
             if [ "$2" ]; then
                 HF_HOME=$2
+                shift
+            else
+                missing_requirement "$1"
+            fi
+            ;;
+        --hf-endpoint)
+            if [ "$2" ]; then
+                HF_ENDPOINT=$2
                 shift
             else
                 missing_requirement "$1"
@@ -279,6 +288,10 @@ get_options() {
             HF_HOME_TARGET="/home/dynamo/.cache/huggingface"
         fi
         VOLUME_MOUNTS+=" -v $HF_HOME:$HF_HOME_TARGET"
+    fi
+
+    if [ -n "$HF_ENDPOINT" ]; then
+        ENVIRONMENT_VARIABLES+=" -e HF_ENDPOINT=$HF_ENDPOINT"
     fi
 
     if [ -z "${PRIVILEGED}" ]; then
