@@ -145,7 +145,8 @@ RUN apt-get update && \
     intel-ocloc intel-oneapi-compiler-dpcpp-cpp-2025.3 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN wget https://github.com/uxlfoundation/oneCCL/releases/download/2021.15.7/intel-oneccl-2021.15.7.8_offline.sh && \
+ARG GITHUB_HOST
+RUN wget ${GITHUB_HOST}/uxlfoundation/oneCCL/releases/download/2021.15.7/intel-oneccl-2021.15.7.8_offline.sh && \
     bash intel-oneccl-2021.15.7.8_offline.sh -a --silent --eula accept && \
     echo "source /opt/intel/oneapi/setvars.sh --force" >> /etc/bash.bashrc && \
     rm -f /opt/intel/oneapi/ccl/latest && \
@@ -331,7 +332,7 @@ ARG ENABLE_MODELEXPRESS_P2P
 ARG MODELEXPRESS_REF
 RUN if [ "${ENABLE_MODELEXPRESS_P2P}" = "true" ]; then \
         echo "Installing ModelExpress from ref: ${MODELEXPRESS_REF}" && \
-        uv pip install "modelexpress @ git+https://github.com/ai-dynamo/modelexpress.git@${MODELEXPRESS_REF}#subdirectory=modelexpress_client/python"; \
+        uv pip install "modelexpress @ git+${GITHUB_HOST}/ai-dynamo/modelexpress.git@${MODELEXPRESS_REF}#subdirectory=modelexpress_client/python"; \
     fi
 {% endif %}
 
@@ -415,8 +416,9 @@ ARG DYNAMO_COMMIT_SHA
 ENV DYNAMO_COMMIT_SHA=$DYNAMO_COMMIT_SHA
 
 {% if device == "xpu" %}
+ARG PYTORCH_WHEELS_URL
 RUN uv pip uninstall triton triton-xpu && \
-    uv pip install triton-xpu==3.6.0 --extra-index-url=https://download.pytorch.org/whl/test/xpu && \
+    uv pip install triton-xpu==3.6.0 --extra-index-url=${PYTORCH_WHEELS_URL}/test/xpu && \
     uv pip uninstall oneccl && \
     uv pip uninstall oneccl-devel
 {%endif%}

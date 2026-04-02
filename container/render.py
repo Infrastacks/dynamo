@@ -92,6 +92,30 @@ def parse_args():
         action="store_true",
         help="Prints the rendered Dockerfile to stdout.",
     )
+    # Air-gap / private registry overrides
+    parser.add_argument(
+        "--registry-config",
+        type=str,
+        default=None,
+        help="Path to YAML file with registry and package source overrides for air-gapped builds",
+    )
+    parser.add_argument(
+        "--pip-index-url",
+        type=str,
+        default=None,
+        help="Override PyPI index URL (e.g., https://pip.internal/simple)",
+    )
+    parser.add_argument(
+        "--github-url",
+        type=str,
+        default=None,
+        help="Override GitHub URL (e.g., https://github-enterprise.internal)",
+    )
+    parser.add_argument(
+        "--enable-air-gap",
+        action="store_true",
+        help="Enable air-gapped build mode (validates all sources are configured)",
+    )
     args = parser.parse_args()
     return args
 
@@ -216,6 +240,19 @@ def main():
     script_dir = Path(__file__).parent
     with open(f"{script_dir}/context.yaml", "r") as f:
         context = yaml.safe_load(f)
+
+    # Merge air-gap overrides into context
+    if args.registry_config:
+        with open(args.registry_config, "r") as f:
+            overrides = yaml.safe_load(f)
+        if "registries" in overrides:
+            context["registries"].update(overrides["registries"])
+        if "package_sources" in overrides:
+            context["package_sources"].update(overrides["package_sources"])
+    if args.pip_index_url:
+        context["package_sources"]["pypi_index"] = args.pip_index_url
+    if args.github_url:
+        context["package_sources"]["github_host"] = args.github_url
 
     render(args, context, script_dir)
 

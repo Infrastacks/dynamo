@@ -269,6 +269,7 @@ RUN --mount=type=cache,target=/home/dynamo/.cache/uv,uid=1000,gid=0,mode=0775 \
 # Install runtime dependencies (common + planner + benchmarks).
 # Test and dev dependencies are NOT installed here — they go in the test and dev images.
 # --no-cache is intentional: mixed indexes (PyPI + PyTorch CUDA wheels) risk serving stale/wrong-variant cached wheels
+ARG PYTORCH_WHEELS_URL
 RUN --mount=type=bind,source=./container/deps/requirements.common.txt,target=/tmp/requirements.common.txt \
     --mount=type=bind,source=./container/deps/requirements.planner.txt,target=/tmp/requirements.planner.txt \
     --mount=type=bind,source=./container/deps/requirements.benchmark.txt,target=/tmp/requirements.benchmark.txt \
@@ -276,7 +277,7 @@ RUN --mount=type=bind,source=./container/deps/requirements.common.txt,target=/tm
     uv pip install \
         --no-cache \
         --index-strategy unsafe-best-match \
-        --extra-index-url https://download.pytorch.org/whl/cu130 \
+        --extra-index-url ${PYTORCH_WHEELS_URL}/cu130 \
         --requirement /tmp/requirements.common.txt \
         --requirement /tmp/requirements.planner.txt \
         --requirement /tmp/requirements.benchmark.txt \

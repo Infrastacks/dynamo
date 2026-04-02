@@ -296,7 +296,8 @@ COPY --from=wheel_builder --chown=dynamo:0 --chmod=775 /workspace/.venv/bin/matu
 
 {% if framework == "sglang" %}
 # SGLang: Create venv with --system-site-packages to inherit runtime packages
-COPY --from=ghcr.io/astral-sh/uv:0.10.7 /uv /tmp/uv-binary
+ARG REGISTRY_GHCR
+COPY --from=${REGISTRY_GHCR}/astral-sh/uv:0.10.7 /uv /tmp/uv-binary
 RUN mkdir -p /opt/dynamo/venv && \
     python3 -m venv --system-site-packages /opt/dynamo/venv && \
     cp -r --no-preserve=mode /usr/local/lib/python${PYTHON_VERSION}/dist-packages/* \
@@ -320,6 +321,7 @@ RUN git lfs install
 # in the parent runtime image — re-resolving them here would risk version drift.
 # SGLang specific: Reinstall pytest to ensure venv has pytest executable with correct shebang
 ARG FRAMEWORK
+ARG PYTORCH_WHEELS_URL
 RUN --mount=type=bind,source=./container/deps/requirements.dev.txt,target=/tmp/requirements.dev.txt \
     --mount=type=bind,source=./container/deps/requirements.test.txt,target=/tmp/requirements.test.txt \
     # Cache uv downloads; uv handles its own locking for this cache.
@@ -327,7 +329,7 @@ RUN --mount=type=bind,source=./container/deps/requirements.dev.txt,target=/tmp/r
     export UV_CACHE_DIR=/root/.cache/uv UV_GIT_LFS=1 UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5 && \
     uv pip install \
         --index-strategy unsafe-best-match \
-        --extra-index-url https://download.pytorch.org/whl/cu130 \
+        --extra-index-url ${PYTORCH_WHEELS_URL}/cu130 \
         --requirement /tmp/requirements.dev.txt \
         --requirement /tmp/requirements.test.txt && \
     if [ "${FRAMEWORK}" = "sglang" ]; then \

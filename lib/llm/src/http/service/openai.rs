@@ -798,6 +798,12 @@ async fn handler_chat_completions(
 
     request.nvext = apply_header_routing_overrides(request.nvext.take(), &headers);
 
+    // Extract InfraStacks org-id header for metering
+    let org_id = headers
+        .get("x-infrastacks-org-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
     // create the context for the request
     let request_id = get_or_create_request_id(request.inner.user.as_deref(), &headers);
     let streaming = request.inner.stream.unwrap_or(false);
@@ -817,15 +823,16 @@ async fn handler_chat_completions(
     )
     .await;
 
-    let response =
-        tokio::spawn(chat_completions(state, template, request, stream_handle).in_current_span())
-            .await
-            .map_err(|e| {
-                ErrorMessage::internal_server_error(&format!(
-                    "Failed to await chat completions task: {:?}",
-                    e,
-                ))
-            })?;
+    let response = tokio::spawn(
+        chat_completions(state, template, request, stream_handle, org_id).in_current_span(),
+    )
+    .await
+    .map_err(|e| {
+        ErrorMessage::internal_server_error(&format!(
+            "Failed to await chat completions task: {:?}",
+            e,
+        ))
+    })?;
 
     // if we got here, then we will return a response and the potentially long running task has completed successfully
     // without need to be cancelled.
@@ -1072,6 +1079,7 @@ async fn chat_completions(
     template: Option<RequestTemplate>,
     mut request: Context<NvCreateChatCompletionRequest>,
     mut stream_handle: ConnectionHandle,
+    org_id: Option<String>,
 ) -> Result<Response, ErrorResponse> {
     // return a 503 if the service is not ready
     check_ready(&state)?;
@@ -1151,6 +1159,17 @@ async fn chat_completions(
         })?;
 
     let mut response_collector = state.metrics_clone().create_response_collector(&model);
+
+    // Attach metering guard if metering is enabled
+    if let Some(collector) = state.metering() {
+        let guard = super::metering::MeteringGuard::new(
+            Arc::clone(collector),
+            request_id.clone(),
+            model.clone(),
+            org_id,
+        );
+        response_collector.set_metering_guard(guard);
+    }
 
     let annotations = request.annotations();
 
