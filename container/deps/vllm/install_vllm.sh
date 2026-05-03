@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-VLLM_VER="0.18.0"
+VLLM_VER="0.19.0"
 VLLM_REF="v${VLLM_VER}"
 DEVICE="cuda"
 
@@ -219,7 +219,7 @@ if [ "$DEVICE" = "cuda" ] && [[ "$CUDA_VERSION_MAJOR" == "12" ]] && [ "$ARCH" = 
     # Get torch lib dir and embed it as RPATH so c_ops.so finds torch libs at runtime
     TORCH_LIB=$(python3 -c "import torch, os; print(os.path.dirname(torch.__file__) + '/lib')")
     # Build from source with --no-build-isolation (uses installed torch) + RPATH for runtime linking
-    TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;10.0+PTX" LDFLAGS="-Wl,-rpath,${TORCH_LIB}" \
+    TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0;10.0+PTX" LDFLAGS="-Wl,-rpath,${TORCH_LIB}" \
         uv pip install --no-build-isolation --no-cache .
     # Verify c_ops.so was compiled (cannot import at build time without GPU/CUDA driver)
     # cd to neutral dir so Python finds installed lmcache, not the source checkout
